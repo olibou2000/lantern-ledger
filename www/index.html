@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2f5a3a">
+<meta name="description" content="Keep track of roleplay story universes, characters, scene prompts and world notes.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}
+</style>
+<title>Lantern Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Literata:opsz,wght@7..72,400;7..72,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a shrine ledger — story bar on top, tab strip, one working panel below; list + editor split on wide screens */
+:root{
+  --bg:#eef1ea; --surface:#f8faf5; --ink:#1f2a22; --muted:#5d6b5f; --line:#cfd8cb;
+  --moss:#3f6b4a; --moss-soft:#dfe9dc; --brass:#a9771f; --brass-soft:#f3e6c9; --danger:#b4472f;
+  --display:"Marcellus", "Palatino Linotype", Georgia, serif;
+  --body:"Literata", Georgia, "Times New Roman", serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a16; --surface:#1b231e; --ink:#e4ebe2; --muted:#9aab9c; --line:#2f3b33;
+  --moss:#8cc29a; --moss-soft:#24352a; --brass:#e0b45e; --brass-soft:#3a2f1a; --danger:#e58a72; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a16; --surface:#1b231e; --ink:#e4ebe2; --muted:#9aab9c; --line:#2f3b33;
+  --moss:#8cc29a; --moss-soft:#24352a; --brass:#e0b45e; --brass-soft:#3a2f1a; --danger:#e58a72; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;padding-inline:0;padding-block:0 48px}
+.wrap{max-width:1040px;margin:0 auto;display:grid;gap:20px;padding-inline:16px;padding-block:20px 0}
+svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.appbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;align-items:center;gap:10px;padding:8px 16px 8px 8px;background:var(--surface);border-bottom:1px solid var(--line)}
+.iconbtn{width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:10px;background:none;color:var(--ink);cursor:pointer;flex:none}
+.iconbtn:hover{background:var(--moss-soft)}
+.iconbtn svg{width:24px;height:24px}
+.appbar-title{display:grid;min-width:0;flex:1}
+.brand{font-family:var(--display);font-size:1.25rem;line-height:1.2}
+.brand span{color:var(--brass)}
+.appbar-story{font-size:.82rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scrim{position:fixed;inset:0;background:rgba(10,14,11,.5);z-index:30}
+.drawer{position:fixed;top:0;bottom:0;left:0;width:min(300px,84vw);z-index:40;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:18px;padding:calc(16px + env(safe-area-inset-top,0px)) 14px calc(16px + env(safe-area-inset-bottom,0px));overflow-y:auto;transform:translateX(-102%);transition:transform .22s ease;box-shadow:0 0 40px rgba(0,0,0,.18)}
+.drawer.open{transform:none}
+.picker{display:grid;gap:8px}
+.pick{width:100%;display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font:inherit;font-family:var(--display);font-size:1.05rem;color:var(--ink);cursor:pointer;text-align:left}
+.pick #pickName{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick .dot{width:12px;height:12px;border-radius:50%;flex:none;background:var(--line)}
+.pick .chev{width:20px;height:20px;flex:none;color:var(--muted);transition:transform .2s}
+.pick[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.menu{display:grid;gap:4px}
+.menu button{display:flex;align-items:center;gap:14px;font:inherit;font-family:var(--display);font-size:1.08rem;padding:12px 14px;border:0;border-radius:10px;background:none;color:var(--ink);cursor:pointer;text-align:left}
+.menu button svg{width:22px;height:22px;flex:none;color:var(--muted)}
+.menu button:hover{background:var(--bg)}
+.menu button[aria-current="true"]{background:var(--moss-soft);color:var(--moss)}
+.menu button[aria-current="true"] svg{color:var(--moss)}
+.drawer-foot{margin-top:auto;padding:0 14px}
+@media (min-width:960px){
+  body{padding-left:300px}
+  .drawer{width:300px;transform:none;box-shadow:none}
+  #menuBtn{display:none}
+  .appbar{padding-left:20px}
+  .scrim{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){.drawer,.pick .chev{transition:none}}
+h2{font-family:var(--display);font-weight:400;font-size:1.4rem;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:0;font-size:.92rem}
+.label{font-family:var(--mono);font-size:.7rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,label.btn:focus-within{outline:2px solid var(--brass);outline-offset:2px}
+.split{display:grid;grid-template-columns:minmax(0,240px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:720px){.split{grid-template-columns:minmax(0,1fr)}}
+.list{display:grid;gap:6px}
+.item{display:grid;gap:2px;text-align:left;font:inherit;background:none;border:1px solid transparent;border-radius:6px;padding:9px 12px;color:var(--ink);cursor:pointer}
+.item small{color:var(--muted);font-size:.82rem}
+.item[aria-current="true"]{background:var(--surface);border-color:var(--line)}
+.item[aria-current="true"] strong{color:var(--moss)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:20px;display:grid;gap:16px;min-width:0}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.field{display:grid;gap:5px;min-width:0}
+input,textarea,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:8px 10px;width:100%}
+textarea{min-height:84px;resize:vertical}
+input.title{font-family:var(--display);font-size:1.4rem;background:transparent;border-color:transparent;padding-inline:0}
+input.title:hover{border-bottom-color:var(--line)}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:inherit;font-size:.9rem;border-radius:5px;padding:7px 14px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn.primary{background:var(--moss);border-color:var(--moss);color:var(--surface)}
+.btn.ghost{border-color:transparent;color:var(--muted);background:transparent}
+.btn.danger{color:var(--danger)}
+.btn.small{padding:0 6px;font-size:.78rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--mono);font-size:.74rem;padding:3px 9px;border-radius:99px;background:var(--moss-soft);color:var(--moss)}
+.prompt{border-left:3px solid var(--brass);background:var(--brass-soft);padding:16px 18px;border-radius:0 6px 6px 0;display:grid;gap:10px}
+.prompt p{margin:0;max-width:62ch}
+.prompt .k{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--brass)}
+.saved{display:grid;gap:8px}
+.saved li{list-style:none;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font-size:.92rem}
+.saved ul{margin:0;padding:0;display:grid;gap:8px}
+.note{font-size:.85rem;color:var(--muted);margin:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:6px;font-size:.88rem;max-width:calc(100% - 32px)}
+.worlds{display:grid;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.wbar{display:grid;gap:4px;padding:6px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.wbar[hidden]{display:none}
+.wbtn{font:inherit;font-family:var(--display);font-size:.98rem;text-align:left;padding:9px 12px;border-radius:8px;border:1px solid transparent;background:none;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:10px;overflow-wrap:anywhere}
+.wbtn small{font-family:var(--body);font-size:.75rem;opacity:.8}
+.wbtn .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.wbtn[aria-pressed="true"]{background:var(--moss);border-color:var(--moss);color:var(--surface)}
+.wbtn.add{border-style:dashed}
+.wedit{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.wedit input{flex:1 1 200px;width:auto}
+.wedit select{width:auto}
+.wname{font-family:var(--display);font-size:1.2rem;font-weight:400}
+.members{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;flex-basis:100%}
+.avas{display:flex}
+.avas .ava+.ava{margin-left:-6px}
+.ava{width:26px;height:26px;border-radius:50%;background:var(--line);object-fit:cover;border:2px solid var(--surface);flex:none}
+.ava.lg{width:40px;height:40px}
+.example{font-family:var(--mono);font-size:.68rem;color:var(--brass);letter-spacing:.06em;text-transform:uppercase}
+.ro{white-space:pre-wrap;max-width:70ch;overflow-wrap:anywhere}
+.ro.full{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+.banner{background:var(--brass-soft);color:var(--ink);border-radius:6px;padding:10px 14px;margin:0;font-size:.9rem}
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.person{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.person .chips{grid-column:1/-1}
+.steps{margin:0;padding-left:1.3em;display:grid;gap:6px;max-width:62ch}
+@media (prefers-reduced-motion:no-preference){.prompt{animation:rise .25s ease-out}@keyframes rise{from{transform:translateY(4px)}to{transform:none}}}
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <button class="iconbtn" id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="drawer">
+    <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <div class="appbar-title">
+    <span class="brand">Lantern <span>Ledger</span></span>
+    <span class="appbar-story" id="barStory">Loading…</span>
+  </div>
+  <span class="label" id="status">Connecting…</span>
+</header>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" aria-label="Main menu">
+  <div class="picker">
+    <button class="pick" id="pickBtn" aria-expanded="false" aria-controls="wbar">
+      <span class="dot" id="pickDot"></span><span id="pickName">Loading…</span>
+      <svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="wbar" id="wbar" hidden></div>
+  </div>
+  <nav class="menu">
+    <button data-tab="cast" aria-current="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.2c2.6-.3 4.6 1.3 5 4.8"/></svg>Cast</button>
+    <button id="m-import"><svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19h14"/></svg>Import characters</button>
+    <button data-tab="scenes"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></svg>Scene prompts</button>
+    <button data-tab="bible"><svg viewBox="0 0 24 24"><path d="M4 5.5C6.5 4.5 9.5 4.5 12 6c2.5-1.5 5.5-1.5 8-.5V19c-2.5-1-5.5-1-8 .5-2.5-1.5-5.5-1.5-8-.5z"/><path d="M12 6v13.5"/></svg>Story bible</button>
+    <button data-tab="friends"><svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.5"/><path d="M3.5 20c.7-3.6 3.3-5.5 6.5-5.5s5.8 1.9 6.5 5.5"/><path d="M19 8v6M16 11h6"/></svg>Friends</button>
+    <button data-tab="backup"><svg viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 01-.5-9A6 6 0 0118 9.5a4 4 0 01-1 8.5z"/><path d="M12 15v-5M9.8 12.2L12 10l2.2 2.2"/></svg>Backup</button>
+  </nav>
+  <p class="note drawer-foot">Your roleplay universes, characters and world notes in one place.</p>
+</aside>
+
+<div class="wrap">
+  <p class="banner" id="banner" hidden></p>
+
+  <div class="worlds">
+    <span class="label">This story</span>
+    <div class="wedit" id="wedit"><p class="note">Loading your stories…</p></div>
+  </div>
+
+  <section id="tab-cast" class="split"></section>
+  <section id="tab-scenes" hidden></section>
+  <section id="tab-bible" class="split" hidden></section>
+  <section id="tab-friends" hidden></section>
+  <section id="tab-backup" hidden></section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="vendor/jszip.min.js"></script>
+<script>
+/* ---------- basics ---------- */
+const COLORS=['#3f8a5a','#c08a2a','#4a72b8','#a5508f','#c4573a','#3a9a9a'];
+const GENRES=['Fantasy','Romance','Sci-fi','Modern','Horror','Historical','Slice of life','Mystery'];
+const KINDS=['Place','Magic / lore','History','Faction','Object','Rule of the world','Timeline'];
+const CF=[['role','Role in the story'],['species','Species / kind'],['age','Age'],['look','Appearance','t'],['voice','Voice & manner','t'],['wants','What they want','t'],['fears','What they fear','t'],['secret','Secret','t'],['ties','Relationships','t'],['notes','Backstory & other notes','t']];
+const BLANK='data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+const $=s=>document.querySelector(s);
+const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const uid=newId;
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(t._t);t._t=setTimeout(()=>t.hidden=true,2600)}
+async function copy(text){try{await navigator.clipboard.writeText(text);toast('Copied')}catch(e){toast('Copy blocked. Select the text and copy it yourself.')}}
+function lsGet(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+function arm(btn,label,fn){btn.onclick=()=>{if(btn.dataset.arm){fn()}else{btn.dataset.arm=1;btn.textContent=label}}}
+
+/* ---------- state ---------- */
+let MODE='loading', db=null, U=null, ME={id:'local'}, CANWRITE=true;
+let STORIES=[], CHARS=[], BIBLE=[], MEMB=[];
+let active=lsGet('ll-active'), curC=null, curB=null, importMode=false, pending=[];
+const LKEY='lantern-ledger-v3';
+
+const seedWorlds=()=>[{id:'w1',name:'The Green Lantern Shrine',genre:'Fantasy',color:COLORS[0],
+  cast:[{id:'c1',name:'Liora',role:'Keeper of the green lantern',species:'Tiger-folk shrine keeper',age:'Adult (late 20s)',look:'Long pale-gold hair streaked with amber, tiger ears and a striped tail, green silk and leaf-shaped trim, a brass staff hung with a green glass lantern.',voice:'Sweet on the surface, a little barbed underneath. Teases first, admits she missed you second.',wants:'To keep tending a shrine that no longer exists, because stopping would mean admitting it is gone.',fears:'Being forgotten. Rooms going dark.',secret:'She still lights the lantern every night, even when no one is coming.',ties:'Waits for the narrator. Guarded with strangers.',example:true}],
+  bible:[{id:'b1',title:'The fallen shrine',kind:'Place',body:'A forest shrine that burned or was abandoned. Liora carries its last lantern. What actually happened to it is still an open question for the book.',example:true},
+    {id:'b2',title:'Lantern rule',kind:'Magic / lore',body:'A lantern lit by a keeper cannot be put out by wind or rain, only by the keeper choosing to let it go.',example:true}]},
+ {id:'w2',name:'Neon Harbor',genre:'Sci-fi',color:COLORS[2],
+  cast:[{id:'c9',name:'Rook Vance',role:'Smuggler with a conscience',species:'Human, cybernetic left arm',age:'Adult (30s)',look:'Rain-slicked coat, cropped silver hair, an arm that hums when it is cold.',voice:'Dry, clipped, never answers a question straight.',wants:'One last clean job and a ticket off-world.',fears:'Owing anyone anything.',secret:'The arm belonged to someone else first.',ties:'Old debts with every dockmaster in the harbor.',example:true}],
+  bible:[{id:'b9',title:'The Harbor',kind:'Place',body:'A floating city of stacked cargo hulls. Power goes out in one district every night on a rotating schedule.',example:true}]}];
+
+function fromWorlds(ws){const out={stories:[],chars:[],bible:[]};
+  ws.forEach((w,i)=>{out.stories.push({id:w.id,name:w.name,genre:w.genre||'Fantasy',color:w.color||COLORS[i%COLORS.length],createdBy:'local',createdAt:i});
+    (w.cast||[]).forEach((c,j)=>out.chars.push({...c,sid:w.id,ownerId:'local',createdAt:j}));
+    (w.bible||[]).forEach((b,j)=>out.bible.push({...b,sid:w.id,ownerId:'local',createdAt:j}))});
+  return out}
+function normalize(d){
+  if(!d||typeof d!=='object')return null;
+  if(Array.isArray(d.stories))return{stories:d.stories,chars:d.chars||[],bible:d.bible||[]};
+  if(Array.isArray(d.worlds))return fromWorlds(d.worlds);
+  if(Array.isArray(d.cast))return fromWorlds([{id:'w1',name:'My first story',cast:d.cast,bible:d.bible||[]}]);
+  return null}
+function deviceData(){return normalize(lsGet(LKEY))||normalize(lsGet('lantern-ledger-v2'))||normalize(lsGet('lantern-ledger-v1'))}
+
+/* ---------- writes ---------- */
+const T={},CH={};
+const clean=o=>{const r={};for(const[k,v]of Object.entries(o))if(k!=='id'&&!k.startsWith('_')&&v!==undefined)r[k]=v;return r};
+function status(t){$('#status').textContent=t||(MODE==='shared'?'Shared · live':'Saved on this device')}
+function saveLocal(){if(!lsSet(LKEY,{stories:STORIES,chars:CHARS,bible:BIBLE}))status('Not saved: browser storage is off');else status()}
+function put(coll,o,delay=500){
+  if(MODE!=='shared'){saveLocal();return}
+  if(!CANWRITE)return;
+  const k=coll+'/'+o.id;if(T[k])clearTimeout(T[k].t);
+  T[k]={t:setTimeout(()=>run(k),delay),fn:()=>db.collection(coll).doc(o.id).set(clean(o))};
+}
+function run(k){const j=T[k];if(!j)return;delete T[k];clearTimeout(j.t);status('Saving…');
+  CH[k]=(CH[k]||Promise.resolve()).then(j.fn).then(()=>status(),writeErr)}
+function flush(){Object.keys(T).forEach(run)}
+function del(coll,id){
+  if(MODE!=='shared'){saveLocal();return}
+  const k=coll+'/'+id;if(T[k]){clearTimeout(T[k].t);delete T[k]}
+  CH[k]=(CH[k]||Promise.resolve()).then(()=>db.collection(coll).doc(id).delete()).catch(writeErr)}
+function writeErr(e){status();
+  if(e&&e.code==='invalid_argument'){CANWRITE=false;renderAll();toast('You can look but not edit here. Ask the owner to invite you as an Editor.')}
+  else if(e&&e.code==='quota_exceeded')toast('Storage is full. Delete some old entries, then try again.');
+  else if(e&&e.code==='resource_exhausted')toast('Too many changes at once. Wait a moment and try again.');
+  else toast('A change did not save. Check your connection and try again.')}
+
+/* ---------- helpers ---------- */
+const W=()=>STORIES.find(s=>s.id===active)||STORIES[0];
+const byTime=(a,b)=>(a.createdAt||0)-(b.createdAt||0);
+const castOf=sid=>CHARS.filter(c=>c.sid===sid).sort(byTime);
+const bibleOf=sid=>BIBLE.filter(b=>b.sid===sid).sort(byTime);
+const membersOf=sid=>[...new Set(MEMB.filter(m=>m.sid===sid).map(m=>m.uid))];
+const shared=()=>MODE==='shared';
+const canWrite=()=>!shared()||CANWRITE;
+const isMember=sid=>!shared()||MEMB.some(m=>m.sid===sid&&m.uid===ME.id);
+const mineC=c=>!shared()||(CANWRITE&&c.ownerId===ME.id);
+const ownsStory=w=>!shared()||(CANWRITE&&w.createdBy===ME.id);
+function join(sid){if(!shared()||!CANWRITE||isMember(sid))return;const m={id:sid+'~'+ME.id,sid,uid:ME.id,joinedAt:Date.now()};MEMB.push(m);put('members',m,0)}
+const who=id=>!shared()||!id||id==='local'?'You':`<span data-uid="${esc(id)}">Someone</span>`;
+const ava=(id,cls='')=>shared()&&id?`<img class="ava ${cls}" data-uid="${esc(id)}" src="${BLANK}" alt="">`:'';
+async function paintPeople(){
+  if(!shared())return;const els=[...document.querySelectorAll('[data-uid]')];if(!els.length)return;
+  const ps=await U.profiles([...new Set(els.map(e=>e.dataset.uid))]);
+  els.forEach(e=>{const p=ps[e.dataset.uid];if(!p)return;const n=p.isMe?'You':(p.name||'Someone');
+    if(e.tagName==='IMG'){e.src=p.avatarUrl;e.title=n;e.alt=n}else e.textContent=n});
+}
+function setActive(id){active=id;lsSet('ll-active',id);curC=null;curB=null;importMode=false;pending=[];renderAll()}
+
+/* ---------- menu drawer ---------- */
+const TABS=['cast','scenes','bible','friends','backup'];
+const wide=matchMedia('(min-width:960px)');
+function setDrawer(open){
+  const d=$('#drawer');open=open&&!wide.matches;
+  d.classList.toggle('open',open);$('#scrim').hidden=!open;$('#menuBtn').setAttribute('aria-expanded',open);
+  d.inert=!open&&!wide.matches;if(open)$('#pickBtn').focus();
+}
+const closeDrawer=()=>setDrawer(false);
+function setPick(open){$('#pickBtn').setAttribute('aria-expanded',open);$('#wbar').hidden=!open}
+function showTab(t){
+  document.querySelectorAll('.menu [data-tab]').forEach(x=>x.setAttribute('aria-current',x.dataset.tab===t));
+  TABS.forEach(k=>$('#tab-'+k).hidden=k!==t);lsSet('ll-tab',t);closeDrawer();window.scrollTo(0,0);
+}
+document.querySelectorAll('.menu [data-tab]').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='cast'&&importMode){importMode=false;renderCast();paintPeople()}showTab(b.dataset.tab)});
+$('#m-import').onclick=()=>{importMode=true;renderCast();showTab('cast')};
+$('#menuBtn').onclick=()=>setDrawer(true);
+$('#scrim').onclick=closeDrawer;
+$('#pickBtn').onclick=()=>setPick($('#pickBtn').getAttribute('aria-expanded')!=='true');
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){setPick(false);closeDrawer();$('#menuBtn').focus()}});
+wide.addEventListener('change',()=>setDrawer(false));
+setDrawer(false);
+
+/* ---------- story bar ---------- */
+function renderWorlds(){
+  const w=W();
+  $('#wbar').innerHTML=STORIES.map(x=>`<button class="wbtn" data-w="${x.id}" aria-pressed="${!!w&&x.id===w.id}"><span class="dot" style="background:${esc(x.color)}"></span>${esc(x.name)||'Untitled story'}${shared()&&!isMember(x.id)?' <small>not joined</small>':''}</button>`).join('')
+    +(canWrite()&&MODE!=='loading'?`<button class="wbtn add" id="w-add">+ New story</button>`:'');
+  $('#pickName').textContent=w?(w.name||'Untitled story'):(MODE==='loading'?'Loading…':'No story yet');
+  $('#pickDot').style.background=w?w.color:'';
+  $('#barStory').textContent=w?(w.name||'Untitled story'):(MODE==='loading'?'Loading…':'Start a story');
+  $('#m-import').hidden=!canWrite()||MODE==='loading';
+  $('#wbar').querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{setPick(false);setActive(b.dataset.w);closeDrawer()});
+  const add=$('#w-add');if(add)add.onclick=()=>{setPick(false);closeDrawer();
+    const s={id:newId(),name:'New story',genre:'Fantasy',color:COLORS[STORIES.length%COLORS.length],createdBy:ME.id,createdAt:Date.now()};
+    STORIES.push(s);put('stories',s,0);join(s.id);setActive(s.id);const n=$('#w-name');if(n)n.select()};
+  const ed=$('#wedit');
+  if(MODE==='loading'){ed.innerHTML='<p class="note">Loading your stories…</p>';return}
+  if(!w){ed.innerHTML=`<p class="note">No stories yet. ${canWrite()?'Tap <strong>+ New story</strong> to start one.':'Nothing has been shared here yet.'}</p>`;return}
+  const own=ownsStory(w),mem=membersOf(w.id);
+  ed.innerHTML=(own?`<input id="w-name" aria-label="Story name" value="${esc(w.name)}">
+      <select id="w-genre" aria-label="Genre">${GENRES.map(g=>`<option ${g===w.genre?'selected':''}>${g}</option>`).join('')}</select>`
+     :`<span class="wname">${esc(w.name)}</span><span class="chip">${esc(w.genre)}</span>`)
+    +(own?'<button class="btn ghost danger" id="w-del">Delete story</button>':'')
+    +(shared()?`<div class="members"><span class="avas">${mem.map(id=>ava(id)).join('')}</span>
+       <span class="note">${mem.length} member${mem.length!==1?'s':''} · started by ${who(w.createdBy)}</span>
+       ${CANWRITE?(isMember(w.id)?(w.createdBy===ME.id?'':'<button class="btn ghost small" id="w-leave">Leave story</button>'):'<button class="btn primary" id="w-join">Join this story</button>'):''}</div>`:'');
+  if(own){
+    $('#w-name').oninput=e=>{w.name=e.target.value;put('stories',w);const b=$(`.wbtn[data-w="${w.id}"]`);const nm=e.target.value||'Untitled story';if(b)b.lastChild.textContent=nm;$('#pickName').textContent=nm;$('#barStory').textContent=nm};
+    $('#w-genre').onchange=e=>{w.genre=e.target.value;put('stories',w,0)};
+    arm($('#w-del'),`Tap again to delete "${w.name}" for everyone`,async()=>{
+      const sid=w.id;
+      castOf(sid).forEach(c=>del('chars',c.id));bibleOf(sid).forEach(b=>del('bible',b.id));
+      MEMB.filter(m=>m.sid===sid).forEach(m=>del('members',m.id));
+      CHARS=CHARS.filter(c=>c.sid!==sid);BIBLE=BIBLE.filter(b=>b.sid!==sid);MEMB=MEMB.filter(m=>m.sid!==sid);
+      STORIES=STORIES.filter(s=>s.id!==sid);del('stories',sid);setActive(STORIES[0]?.id||null);toast('Story deleted')});
+  }
+  const j=$('#w-join');if(j)j.onclick=()=>{join(w.id);renderAll();toast(`Joined ${w.name}`)};
+  const l=$('#w-leave');if(l)arm(l,'Tap again to leave (your characters stay)',()=>{const id=w.id+'~'+ME.id;MEMB=MEMB.filter(m=>m.id!==id);del('members',id);renderAll()});
+}
+
+/* ---------- cast ---------- */
+function renderCast(){
+  const w=W(),box=$('#tab-cast');
+  if(MODE==='loading'){box.innerHTML='<div></div><div class="panel"><p class="note">Loading characters…</p></div>';return}
+  if(!w){box.innerHTML='<div></div><div class="panel"><p class="note">Create a story first, then add its characters here.</p></div>';return}
+  const cast=castOf(w.id);
+  let c=cast.find(x=>x.id===curC);if(!c&&!importMode){c=cast[0];curC=c?.id}
+  box.innerHTML=`<div class="list">
+    ${cast.map(x=>`<button class="item" data-id="${x.id}" aria-current="${x.id===curC&&!importMode}"><strong>${esc(x.name)||'Untitled'}</strong><small>${esc(x.role)||(x.full?'Imported':'No role yet')}${shared()?` · ${who(x.ownerId)}`:''}</small></button>`).join('')}
+    ${canWrite()?'<div class="btns"><button class="btn" id="addC">Add character</button><button class="btn" id="impC">Import</button></div>':''}</div>
+    ${importMode?importHTML():c?(mineC(c)?editHTML(c):viewHTML(c,w)):`<div class="panel"><p class="note">No characters in ${esc(w.name)} yet.${canWrite()?' Add one or import from a file.':''}</p></div>`}`;
+  box.querySelectorAll('.item').forEach(b=>b.onclick=()=>{curC=b.dataset.id;importMode=false;renderCast();paintPeople()});
+  const imp=$('#impC');if(imp)imp.onclick=()=>{importMode=true;renderCast()};
+  const add=$('#addC');if(add)add.onclick=()=>{importMode=false;join(w.id);
+    const n={id:newId(),sid:w.id,ownerId:ME.id,createdAt:Date.now(),name:'New character'};CF.forEach(f=>n[f[0]]='');
+    CHARS.push(n);put('chars',n,0);curC=n.id;renderAll();const t=$('#c-name');if(t)t.select()};
+  if(importMode){wireImport();return}
+  if(!c)return;
+  if(!mineC(c)){
+    $('#copyC').onclick=()=>copy(profileText(c));
+    const r=$('#remC');if(r)arm(r,'Tap again to remove from this story',()=>{CHARS=CHARS.filter(x=>x.id!==c.id);del('chars',c.id);curC=null;renderAll()});
+    return}
+  const touch=()=>{c.updatedAt=Date.now();delete c.example;put('chars',c)};
+  $('#c-name').oninput=e=>{c.name=e.target.value;touch();const b=$(`.item[data-id="${c.id}"] strong`);if(b)b.textContent=c.name||'Untitled'};
+  box.querySelectorAll('[data-k]').forEach(el=>el.oninput=()=>{c[el.dataset.k]=el.value;touch()});
+  $('#copyC').onclick=()=>copy(profileText(c));
+  if(c.full){
+    $('#c-full').oninput=e=>{c.full=e.target.value;touch()};
+    arm($('#splitC'),'Tap again to split (sorting may not be perfect)',()=>{const p=parseText(c.full)[0]||emptyChar();CF.forEach(f=>c[f[0]]=p[f[0]]||'');if(!c.name&&p.name)c.name=p.name;delete c.full;put('chars',{...c,full:undefined},0);renderCast()});
+  }
+  arm($('#delC'),'Tap again to delete',()=>{CHARS=CHARS.filter(x=>x.id!==c.id);del('chars',c.id);curC=null;renderAll()});
+}
+const profileText=c=>c.full?c.full:`${c.name}\n`+CF.filter(f=>c[f[0]]).map(f=>`${f[1]}: ${c[f[0]]}`).join('\n');
+function editHTML(c){return `<div class="panel">
+  ${c.example?'<span class="example">Example entry, edit or delete it</span>':''}
+  <input class="title" id="c-name" value="${esc(c.name)}" aria-label="Character name">
+  ${c.full?`<span class="example" style="color:var(--moss)">Imported profile, shown exactly as uploaded</span>
+  <label class="field"><span class="label">Full profile</span><textarea id="c-full" style="min-height:440px">${esc(c.full)}</textarea></label>`:`
+  <div class="row">${CF.filter(f=>!f[2]).map(f=>`<label class="field"><span class="label">${f[1]}</span><input id="c-${f[0]}" data-k="${f[0]}" value="${esc(c[f[0]])}"></label>`).join('')}</div>
+  ${CF.filter(f=>f[2]).map(f=>`<label class="field"><span class="label">${f[1]}</span><textarea id="c-${f[0]}" data-k="${f[0]}">${esc(c[f[0]])}</textarea></label>`).join('')}`}
+  <div class="btns"><button class="btn" id="copyC">Copy profile</button>${c.full?'<button class="btn ghost" id="splitC">Split into fields</button>':''}<button class="btn ghost danger" id="delC">Delete</button></div>
+</div>`}
+function viewHTML(c,w){return `<div class="panel">
+  <div style="display:flex;gap:10px;align-items:center">${ava(c.ownerId,'lg')}<div><h2>${esc(c.name)||'Untitled'}</h2><p class="note">Played by ${who(c.ownerId)}. Only they can edit this character.</p></div></div>
+  ${c.full?`<div class="ro full">${esc(c.full)}</div>`:(CF.filter(f=>c[f[0]]).map(f=>`<div class="field"><span class="label">${f[1]}</span><div class="ro">${esc(c[f[0]])}</div></div>`).join('')||'<p class="note">No details yet.</p>')}
+  <div class="btns"><button class="btn" id="copyC">Copy profile</button>${ownsStory(w)?'<button class="btn ghost danger" id="remC">Remove from story</button>':''}</div>
+</div>`}
+
+/* ---------- import ---------- */
+const SYN={name:['name','character','character name','full name','char name'],role:['role','occupation','job','title','class','profession'],species:['species','race','kind','type','ancestry'],age:['age'],
+  look:['appearance','looks','look','description','physical description','physical','features','outfit','clothing','body','height','hair','eyes'],
+  voice:['personality','voice','manner','mannerisms','speech','traits','demeanor','temperament','persona','char persona'],
+  wants:['goals','goal','wants','desires','motivation','motivations'],fears:['fears','fear','weaknesses','weakness','flaws'],secret:['secret','secrets'],
+  ties:['relationships','relationship','ties','family','friends','allies','enemies'],
+  notes:['backstory','background','history','scenario','notes','likes','dislikes','other','bio','biography','first mes','first message','greeting','creator notes','tags']};
+const keyFor=l=>{l=l.toLowerCase().replace(/[_*#]/g,' ').replace(/\s+/g,' ').trim();for(const k in SYN)if(SYN[k].includes(l))return k;return null};
+const emptyChar=()=>{const c={id:uid(),name:'',full:''};CF.forEach(f=>c[f[0]]='');return c};
+const addTo=(c,k,v)=>{v=String(v??'').trim();if(!v)return;c[k]=c[k]?c[k]+'\n'+v:v};
+function parseText(t){
+  const out=[];
+  for(const block of t.replace(/\r/g,'').split(/^\s*(?:-{3,}|={3,}|\*{3,})\s*$/m)){
+    let c=emptyChar(),cur=null,first=true;
+    for(const raw of block.split('\n')){
+      c.full+=raw+'\n';
+      const line=raw.trim();if(!line)continue;
+      const h=line.match(/^#{1,6}\s*(.+?)\s*:?$/);
+      const m=line.match(/^[-*•\s]*\**\s*([A-Za-z][A-Za-z '\/&]{0,30}?)\s*\**\s*:\s*\**\s*(.*)$/);
+      const label=h?h[1]:m?m[1]:null, k=label?keyFor(label):null;
+      if(k==='name'){const v=(h?'':m[2]).trim();if(c.name&&v){c.full=c.full.slice(0,-(raw.length+1));out.push(c);c=emptyChar();c.full=raw+'\n'}if(v)c.name=v;cur=v?null:'name';first=false;continue}
+      if(k){cur=k;const v=h?'':m[2];addTo(c,k,k==='notes'&&!/^(notes|other)$/i.test(label.trim())?`${label.trim()}: ${v}`:v);first=false;continue}
+      if(h&&!c.name&&first){c.name=h[1];first=false;continue}
+      if(first&&!c.name&&line.length<40&&!m){c.name=line.replace(/[*_]/g,'');first=false;continue}
+      first=false;
+      if(cur==='name'&&!c.name){c.name=line;cur=null;continue}
+      if(m&&!k){addTo(c,'notes',`${m[1]}: ${m[2]}`);cur='notes';continue}
+      addTo(c,cur||'notes',line);
+    }
+    if(c.name||CF.some(f=>c[f[0]]))out.push(c);
+  }
+  out.forEach(c=>c.full=c.full.replace(/^\s*\n|\s+$/g,''));
+  return out;
+}
+function parseJSON(o){
+  if(Array.isArray(o))return o.flatMap(parseJSON);
+  if(!o||typeof o!=='object')return [];
+  if(Array.isArray(o.characters))return o.characters.flatMap(parseJSON);
+  if(Array.isArray(o.chars))return o.chars.flatMap(parseJSON);
+  if(Array.isArray(o.worlds))return o.worlds.flatMap(w=>parseJSON(w.cast||[]));
+  if(o.data&&(o.spec||o.data.name))o=o.data;
+  if(o.full&&o.name){const c=emptyChar();Object.assign(c,{name:o.name,full:o.full});return [c]}
+  const c=emptyChar();let any=false;
+  c.full=Object.entries(o).filter(([k,v])=>(typeof v==='string'||typeof v==='number')&&String(v).trim()&&!/^(id|sid|ownerId|createdAt|updatedAt|spec|spec_version|avatar|create_date|creator|character_version)$/i.test(k))
+    .map(([k,v])=>`${k.replace(/_/g,' ').replace(/^./,s=>s.toUpperCase())}: ${v}`).join('\n\n');
+  for(const [k,v] of Object.entries(o)){
+    if(typeof v!=='string'&&typeof v!=='number')continue;
+    const f=CF.some(x=>x[0]===k)||k==='name'?k:keyFor(k.replace(/([a-z])([A-Z])/g,'$1 $2'));
+    if(!f)continue;any=true;
+    if(f==='name'){c.name=c.name||String(v)}else if(f==='notes'&&!['notes','backstory'].includes(k)){addTo(c,'notes',`${k.replace(/_/g,' ')}: ${v}`)}else addTo(c,f,v);
+  }
+  return any?[c]:[];
+}
+function pngCard(buf){
+  const d=new DataView(buf),td=new TextDecoder();let p=8;
+  while(p+8<=d.byteLength){const len=d.getUint32(p),type=td.decode(new Uint8Array(buf,p+4,4));
+    if(type==='tEXt'){const b=new Uint8Array(buf,p+8,len),z=b.indexOf(0),key=td.decode(b.slice(0,z));
+      if(key==='chara'||key==='ccv3'){const bin=atob(td.decode(b.slice(z+1)));return JSON.parse(td.decode(Uint8Array.from(bin,ch=>ch.charCodeAt(0))))}}
+    if(type==='IEND')break;p+=12+len}
+  return null;
+}
+async function docxText(buf){
+  if(!window.JSZip)throw new Error('Word reader did not load. Check your connection and try again.');
+  const z=await JSZip.loadAsync(buf),f=z.file('word/document.xml');if(!f)throw new Error('This .docx has no readable text.');
+  const x=new DOMParser().parseFromString(await f.async('string'),'application/xml');
+  return [...x.getElementsByTagName('w:p')].map(p=>[...p.getElementsByTagName('w:t')].map(t=>t.textContent).join('')).join('\n');
+}
+async function readFile(f){
+  const n=f.name.toLowerCase();
+  if(n.endsWith('.png')){const card=pngCard(await f.arrayBuffer());if(!card)throw new Error('No character card data inside this image.');return parseJSON(card)}
+  if(n.endsWith('.docx'))return parseText(await docxText(await f.arrayBuffer()));
+  const t=await f.text();
+  if(n.endsWith('.json')||/^\s*[\[{]/.test(t)){try{const r=parseJSON(JSON.parse(t));if(r.length)return r}catch(e){}}
+  return parseText(t);
+}
+function importHTML(){
+  const targets=STORIES.filter(s=>canWrite());
+  return `<div class="panel" id="imp">
+    <div><span class="label">Import characters</span>
+    <p class="note" style="max-width:62ch;margin-top:6px">Upload .txt, .md, Word (.docx), JSON or PNG character cards. For a Google Doc, use File, then Download, then .docx or .txt, or copy the text and paste it below. For Grok, copy the character description and paste it, or save it as a .txt file. Each character keeps its full text exactly as written. Start each one with a <em>Name:</em> line or separate them with <em>---</em> to import several at once.</p></div>
+    <label class="btn primary" style="justify-self:start" for="imp-file">Choose files</label>
+    <input type="file" id="imp-file" multiple accept=".txt,.md,.text,.json,.docx,.png" hidden>
+    <label class="field"><span class="label">Or paste text</span><textarea id="imp-paste" placeholder="Name: Liora&#10;Species: Tiger-folk&#10;Personality: Sweet, a little barbed&#10;---&#10;Name: Next character…"></textarea></label>
+    <div class="btns"><button class="btn" id="imp-read">Read pasted text</button><button class="btn ghost" id="imp-cancel">Close</button></div>
+    <p class="note" id="imp-msg" aria-live="polite"></p>
+    ${pending.length?`<div class="saved"><span class="label">Found ${pending.length} character${pending.length>1?'s':''}, check the ones to add</span><ul>
+      ${pending.map((c,i)=>`<li><label style="display:flex;gap:10px;align-items:start;cursor:pointer"><input type="checkbox" data-p="${i}" ${c._on!==false?'checked':''} style="width:auto;margin-top:4px">
+        <span><strong>${esc(c.name)||'Unnamed'}</strong><br><small class="note">${c.full?`${c.full.split('\n').length} lines, kept whole`:'No details found'}</small></span></label></li>`).join('')}
+    </ul></div>
+    <div class="row"><label class="field"><span class="label">Add to story</span><select id="imp-to">${targets.map(w=>`<option value="${w.id}" ${w.id===W()?.id?'selected':''}>${esc(w.name)}</option>`).join('')}</select></label></div>
+    <div class="btns"><button class="btn primary" id="imp-go">Add selected characters</button><button class="btn ghost" id="imp-clear">Clear list</button></div>`:''}
+  </div>`;
+}
+function wireImport(){
+  const msg=t=>$('#imp-msg').textContent=t;
+  $('#imp-file').onchange=async e=>{const errs=[];let n=0;
+    for(const f of e.target.files){try{const r=await readFile(f);pending.push(...r);n+=r.length;if(!r.length)errs.push(`${f.name}: no characters found`)}catch(err){errs.push(`${f.name}: ${err.message}`)}}
+    renderCast();msg([n?`Read ${n} character${n>1?'s':''}.`:'',...errs].filter(Boolean).join(' '))};
+  $('#imp-read').onclick=()=>{const t=$('#imp-paste').value;if(!t.trim()){msg('Paste some text first.');return}
+    let r;try{r=/^\s*[\[{]/.test(t)?parseJSON(JSON.parse(t)):parseText(t)}catch(e){r=parseText(t)}
+    pending.push(...r);renderCast();msg(r.length?`Read ${r.length} from the pasted text.`:'Nothing character-shaped found in the pasted text.')};
+  $('#imp-cancel').onclick=()=>{importMode=false;pending=[];renderCast();paintPeople()};
+  const imp=$('#imp');
+  imp.ondragover=e=>e.preventDefault();
+  imp.ondrop=e=>{e.preventDefault();const inp=$('#imp-file');inp.files=e.dataTransfer.files;inp.onchange({target:inp})};
+  if(!pending.length)return;
+  imp.querySelectorAll('[data-p]').forEach(b=>b.onchange=()=>pending[+b.dataset.p]._on=b.checked);
+  $('#imp-clear').onclick=()=>{pending=[];renderCast()};
+  $('#imp-go').onclick=()=>{
+    const to=$('#imp-to').value,chosen=pending.filter(c=>c._on!==false);
+    if(!chosen.length){msg('Check at least one character.');return}
+    const w=STORIES.find(x=>x.id===to);if(!w){msg('Pick a story first.');return}
+    join(to);
+    chosen.forEach((c,i)=>{delete c._on;Object.assign(c,{id:newId()+i,sid:to,ownerId:ME.id,createdAt:Date.now()+i,name:c.name||'Unnamed'});CHARS.push(c);put('chars',c,i*150)});
+    pending=[];importMode=false;active=to;lsSet('ll-active',to);curC=chosen[0].id;renderAll();
+    toast(`Added ${chosen.length} to ${w.name}`);
+  };
+}
+
+/* ---------- scenes ---------- */
+const P={
+  setting:['a shrine room lit by one lantern','a rain-soaked market at closing time','the ruins of an old temple at dawn','a cramped inn room with one window','a festival night, lanterns strung over the river','a forest path where the trees have gone quiet','a rooftop above a sleeping town','a bathhouse courtyard after hours'],
+  mood:['tender','tense','bittersweet','playful','jealous','guarded','longing','reconciling after a fight'],
+  conflict:['someone arrives late and owes an explanation','a promise made years ago comes due','a stranger recognizes something they carry','one of them is hiding an injury','a letter arrives that should not exist','they have to share a room and pretend it is fine','an old rival shows up offering help','the lights flicker for the first time'],
+  beat:['end on an unanswered question','one of them says the true thing, then takes it back','interrupt the moment right before a confession','let a small gesture carry the whole scene','reveal a detail about the world','close the door, then cut to morning'],
+  sense:['the smell of lamp oil and cedar','rain on paper screens','a hand resting a moment too long','cold floorboards under bare feet','the click of glass beads','green light on someone’s face']
+};
+const PL={setting:'Setting',mood:'Mood',conflict:'Inciting moment',beat:'Shape the ending',sense:'Sensory anchor'};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+let lock={},cur=null,selA='',selB='';
+const newPrompt=()=>{const o={};Object.keys(P).forEach(k=>o[k]=lock[k]&&cur?cur[k]:pick(P[k]));return o};
+const savedAll=()=>lsGet('ll-saved')||{};
+function renderScenes(){
+  const w=W(),box=$('#tab-scenes');
+  if(!w){box.innerHTML='<div class="panel"><p class="note">Create or pick a story to get scene prompts for its cast.</p></div>';return}
+  if(!cur)cur=newPrompt();
+  const cast=castOf(w.id),saved=savedAll()[w.id]||[];
+  if(!cast.some(c=>c.id===selA))selA=(cast.find(mineC)||cast[0])?.id||'';
+  if(selB&&!cast.some(c=>c.id===selB))selB='';
+  const opts=sel=>cast.map(c=>`<option value="${c.id}" ${c.id===sel?'selected':''}>${esc(c.name)}</option>`).join('');
+  box.innerHTML=`<div class="panel">
+    <div class="row">
+      <label class="field"><span class="label">Point-of-view character</span><select id="s-a">${opts(selA)}</select></label>
+      <label class="field"><span class="label">With</span><select id="s-b"><option value="">The reader (second person)</option>${opts(selB)}</select></label>
+    </div>
+    <div class="prompt" aria-live="polite">
+      ${Object.keys(P).map(k=>`<div><span class="k">${PL[k]}</span><p>${esc(cur[k])} <button class="btn ghost small" data-lock="${k}" aria-pressed="${!!lock[k]}">${lock[k]?'Locked':'Lock'}</button></p></div>`).join('')}
+    </div>
+    <div class="btns"><button class="btn primary" id="roll">New prompt</button><button class="btn" id="copyS">Copy</button><button class="btn" id="saveS">Save to list</button></div>
+    <p class="note">Lock any line you like, then roll again to reshuffle the rest. Saved prompts stay on this device.</p>
+    <div class="saved"><span class="label">Saved prompts for ${esc(w.name)} (${saved.length})</span>
+    ${saved.length?`<ul>${saved.map((s,i)=>`<li>${esc(s)} <button class="btn ghost danger small" data-del="${i}">Remove</button></li>`).join('')}</ul>`:'<p class="note">Prompts you save show up here.</p>'}</div>
+  </div>`;
+  const text=()=>{const A=cast.find(c=>c.id===selA),B=cast.find(c=>c.id===selB);
+    return `${A?A.name:'Your character'} and ${B?B.name:'you'}, in ${cur.setting}. Mood: ${cur.mood}. ${cur.conflict[0].toUpperCase()+cur.conflict.slice(1)}. Anchor it in ${cur.sense}; ${cur.beat}.`};
+  const setSaved=list=>{const all=savedAll();all[w.id]=list;lsSet('ll-saved',all);renderScenes()};
+  $('#s-a').onchange=e=>{selA=e.target.value};$('#s-b').onchange=e=>{selB=e.target.value};
+  $('#roll').onclick=()=>{cur=newPrompt();renderScenes()};
+  $('#copyS').onclick=()=>copy(text());
+  $('#saveS').onclick=()=>{setSaved([text(),...saved]);toast('Saved')};
+  box.querySelectorAll('[data-lock]').forEach(b=>b.onclick=()=>{lock[b.dataset.lock]=!lock[b.dataset.lock];renderScenes()});
+  box.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const l=[...saved];l.splice(+b.dataset.del,1);setSaved(l)});
+}
+
+/* ---------- bible ---------- */
+function renderBible(){
+  const w=W(),box=$('#tab-bible');
+  if(MODE==='loading'){box.innerHTML='<div></div><div class="panel"><p class="note">Loading…</p></div>';return}
+  if(!w){box.innerHTML='<div></div><div class="panel"><p class="note">Create a story first, then build its world here.</p></div>';return}
+  const list=bibleOf(w.id);let e=list.find(x=>x.id===curB);if(!e){e=list[0];curB=e?.id}
+  const ed=canWrite();
+  box.innerHTML=`<div class="list">
+    ${list.map(x=>`<button class="item" data-id="${x.id}" aria-current="${x.id===curB}"><strong>${esc(x.title)||'Untitled'}</strong><small>${esc(x.kind)}</small></button>`).join('')}
+    ${ed?'<button class="btn" id="addB">Add entry</button>':''}</div>
+    ${e?`<div class="panel">
+      ${e.example?'<span class="example">Example entry, edit or delete it</span>':''}
+      ${ed?`<input class="title" id="b-title" value="${esc(e.title)}" aria-label="Entry title">
+      <label class="field"><span class="label">Kind</span><select id="b-kind">${KINDS.map(k=>`<option ${k===e.kind?'selected':''}>${k}</option>`).join('')}</select></label>
+      <label class="field"><span class="label">Notes</span><textarea id="b-body" style="min-height:220px">${esc(e.body)}</textarea></label>`
+      :`<h2>${esc(e.title)}</h2><span class="chip" style="justify-self:start">${esc(e.kind)}</span><div class="ro">${esc(e.body)}</div>`}
+      ${shared()?`<p class="note">Added by ${who(e.ownerId)}${e.editedBy&&e.editedBy!==e.ownerId?` · last edited by ${who(e.editedBy)}`:''}. Everyone in the story can edit the bible.</p>`:''}
+      <div class="btns"><button class="btn" id="copyB">Copy entry</button>${ed?'<button class="btn ghost danger" id="delB">Delete</button>':''}</div>
+    </div>`:`<div class="panel"><p class="note">Add places, rules and history for ${esc(w.name)} here. Everyone in the story shares this.</p></div>`}`;
+  box.querySelectorAll('.item').forEach(b=>b.onclick=()=>{curB=b.dataset.id;renderBible();paintPeople()});
+  const add=$('#addB');if(add)add.onclick=()=>{join(w.id);const n={id:newId(),sid:w.id,ownerId:ME.id,createdAt:Date.now(),title:'New entry',kind:'Place',body:''};BIBLE.push(n);put('bible',n,0);curB=n.id;renderBible();$('#b-title').select()};
+  if(!e)return;
+  $('#copyB').onclick=()=>copy(`${e.title} (${e.kind})\n${e.body}`);
+  if(!ed)return;
+  const upd=(k,v)=>{e[k]=v;e.editedBy=ME.id;delete e.example;put('bible',e)};
+  $('#b-title').oninput=ev=>{upd('title',ev.target.value);const s=$(`.item[data-id="${e.id}"] strong`);if(s)s.textContent=ev.target.value||'Untitled'};
+  $('#b-kind').onchange=ev=>{upd('kind',ev.target.value);renderBible()};
+  $('#b-body').oninput=ev=>upd('body',ev.target.value);
+  arm($('#delB'),'Tap again to delete',()=>{BIBLE=BIBLE.filter(x=>x.id!==e.id);del('bible',e.id);curB=null;renderBible()});
+}
+
+/* ---------- friends ---------- */
+function renderFriends(){
+  const box=$('#tab-friends');
+  if(MODE==='loading'){box.innerHTML='<div class="panel"><p class="note">Loading…</p></div>';return}
+  const how=`<div class="panel"><span class="label">Add a friend</span>
+    <ol class="steps">
+      <li>Tap <strong>Share</strong> on this page in Claude.</li>
+      <li>Invite your friend by email and set them to <strong>Editor</strong>.</li>
+      <li>They open the invite, sign in to Claude (a free account works), and tap <strong>Join this story</strong> on any story.</li>
+    </ol>
+    <p class="note" style="max-width:62ch">Keep "anyone with the link" sharing off. People who arrive through a public link can only look, and turning it on stops invited Editors from adding characters.</p></div>`;
+  if(!shared()){box.innerHTML=`<div class="panel"><span class="label">Coming soon</span><h2>Friends and shared universes</h2><p class="note" style="max-width:62ch">The next update adds sign-in, a friends list, and story universes you can share, so your friends' characters show up right next to yours. For now, your stories are saved on this device. Use Backup to keep a copy.</p></div>`;return}
+  const ids=[...new Set([ME.id,...MEMB.map(m=>m.uid),...CHARS.map(c=>c.ownerId),...STORIES.map(s=>s.createdBy)].filter(x=>x&&x!=='local'))];
+  box.innerHTML=`<div style="display:grid;gap:16px">
+    <div class="panel"><span class="label">People in your universes (${ids.length})</span>
+    <div class="people">${ids.map(id=>{
+      const st=STORIES.filter(s=>MEMB.some(m=>m.sid===s.id&&m.uid===id));
+      const n=CHARS.filter(c=>c.ownerId===id).length;
+      return `<div class="person">${ava(id,'lg')}<div><strong>${who(id)}</strong><br><small class="note">${n} character${n!==1?'s':''}</small></div>
+        <div class="chips">${st.map(s=>`<button class="chip" style="border:0;cursor:pointer" data-go="${s.id}">${esc(s.name)}</button>`).join('')||'<span class="note">Not in a story yet</span>'}</div></div>`}).join('')}</div></div>
+    ${how}</div>`;
+  box.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{setActive(b.dataset.go);showTab('cast')});
+}
+
+/* ---------- backup ---------- */
+function bundle(){return{stories:STORIES.map(s=>({...s})),chars:CHARS.map(c=>({...c})),bible:BIBLE.map(b=>({...b}))}}
+async function addBundle(d){ // copies stories into the current space, owned by this viewer
+  const map={};let i=0;
+  for(const s of d.stories){const ns={...s,id:newId()+(i++),createdBy:ME.id,createdAt:Date.now()+i};map[s.id]=ns.id;STORIES.push(ns);if(shared())await db.collection('stories').doc(ns.id).set(clean(ns))}
+  for(const c of d.chars){if(!map[c.sid])continue;const nc={...c,id:newId()+(i++),sid:map[c.sid],ownerId:ME.id};CHARS.push(nc);if(shared())await db.collection('chars').doc(nc.id).set(clean(nc))}
+  for(const b of d.bible){if(!map[b.sid])continue;const nb={...b,id:newId()+(i++),sid:map[b.sid],ownerId:ME.id};BIBLE.push(nb);if(shared())await db.collection('bible').doc(nb.id).set(clean(nb))}
+  if(shared())for(const sid of Object.values(map)){const m={id:sid+'~'+ME.id,sid,uid:ME.id,joinedAt:Date.now()};MEMB.push(m);await db.collection('members').doc(m.id).set(clean(m))}
+  else saveLocal();
+  return Object.keys(map).length;
+}
+function renderBackup(){
+  const box=$('#tab-backup');
+  const dev=shared()?deviceData():null, moved=lsGet('ll-moved');
+  box.innerHTML=`<div class="panel">
+    ${dev&&dev.stories.length&&!moved&&CANWRITE?`<div class="banner" style="display:grid;gap:8px"><span>This device has ${dev.stories.length} stor${dev.stories.length>1?'ies':'y'} saved from before sharing was added.</span>
+      <div class="btns"><button class="btn primary" id="bkMove">Copy them into the shared space</button><button class="btn ghost" id="bkSkip">Not now</button></div></div>`:''}
+    <p class="note" style="max-width:62ch">${shared()?'Shared stories live online, so they are already safe. The backup is a copy of everything you can see here, in case you want to keep your own.':'Your work is stored only in this browser on this device.'} Copy the backup text and keep it somewhere safe, such as a notes app. Paste it back here to restore it${shared()?' as new copies owned by you':''}.</p>
+    <label class="field"><span class="label">Backup text</span><textarea id="bk" style="min-height:160px;font-family:var(--mono);font-size:.8rem"></textarea></label>
+    <div class="btns"><button class="btn primary" id="bkCopy">Copy backup</button>${canWrite()?'<button class="btn" id="bkLoad">Restore from pasted text</button>':''}${!shared()?'<button class="btn ghost danger" id="bkReset">Reset to examples</button>':''}</div>
+    <div class="chips">${STORIES.map(w=>`<span class="chip">${esc(w.name)}: ${castOf(w.id).length} characters, ${bibleOf(w.id).length} entries</span>`).join('')}</div>
+  </div>`;
+  $('#bk').value=JSON.stringify(bundle());
+  $('#bkCopy').onclick=()=>{$('#bk').value=JSON.stringify(bundle());copy($('#bk').value);$('#bk').select()};
+  const ld=$('#bkLoad');if(ld)ld.onclick=async()=>{let d;try{d=normalize(JSON.parse($('#bk').value))}catch(e){}
+    if(!d||!d.stories.length){toast('That text is not a Lantern Ledger backup');return}
+    if(!shared()){STORIES=d.stories;CHARS=d.chars;BIBLE=d.bible;saveLocal();setActive(STORIES[0].id);toast('Restored');return}
+    try{const n=await addBundle(d);renderAll();toast(`Restored ${n} stor${n>1?'ies':'y'}`)}catch(e){writeErr(e)}};
+  const rs=$('#bkReset');if(rs)arm(rs,'Tap again to erase your work',()=>{const d=fromWorlds(seedWorlds());STORIES=d.stories;CHARS=d.chars;BIBLE=d.bible;saveLocal();setActive('w1');toast('Reset')});
+  const mv=$('#bkMove');if(mv)mv.onclick=async()=>{mv.disabled=true;mv.textContent='Copying…';
+    try{const n=await addBundle(dev);lsSet('ll-moved',true);renderAll();toast(`Copied ${n} stor${n>1?'ies':'y'} into the shared space`)}catch(e){mv.disabled=false;writeErr(e)}};
+  const sk=$('#bkSkip');if(sk)sk.onclick=()=>{lsSet('ll-moved',true);renderBackup()};
+}
+
+/* ---------- render + live data ---------- */
+function renderAll(){
+  const b=$('#banner');
+  if(shared()&&!CANWRITE){b.hidden=false;b.textContent='You can read these stories but not change them. Ask the owner to invite you by email as an Editor.'}
+  else b.hidden=true;
+  status(MODE==='loading'?'Connecting…':undefined);
+  renderWorlds();renderCast();renderScenes();renderBible();renderFriends();renderBackup();paintPeople();
+}
+let dirty=false;
+const editing=()=>{const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.type!=='checkbox'&&a.type!=='file'};
+function onData(){if(editing()){dirty=true;return}renderAll()}
+document.addEventListener('focusout',()=>{flush();setTimeout(()=>{if(dirty&&!editing()){dirty=false;renderAll()}},400)});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)flush()});
+
+function startLocal(){
+  MODE='local';const d=deviceData()||fromWorlds(seedWorlds());
+  STORIES=d.stories;CHARS=d.chars;BIBLE=d.bible;
+  renderAll();
+}
+function subscribe(){
+  const got={};const ready=()=>{if(got.stories&&got.chars&&got.bible&&got.members&&MODE==='loading'){MODE='shared';if(!STORIES.some(s=>s.id===active))active=(STORIES.find(s=>isMember(s.id))||STORIES[0])?.id||null;renderAll()}};
+  const sub=(coll,set)=>db.collection(coll).onSnapshot(s=>{set(s.docs.map(d=>({...d.data(),id:d.id})));got[coll]=true;if(MODE==='loading')ready();else{if(coll==='stories'&&!STORIES.some(x=>x.id===active))active=STORIES[0]?.id||null;onData()}},
+    e=>{if(e&&e.code==='revoked'){toast('Access to the shared stories changed. Reload to continue.')}else toast('Live updates stopped. Reload the page to reconnect.')});
+  sub('stories',v=>STORIES=v);sub('chars',v=>CHARS=v);sub('bible',v=>BIBLE=v);sub('members',v=>MEMB=v);
+}
+renderAll();
+{const t=lsGet('ll-tab');if(t&&TABS.includes(t))showTab(t)}
+(async()=>{
+  let d=null,u=null;
+  try{if(window.claude&&window.claude.use)[d,u]=await Promise.all([window.claude.use('db'),window.claude.use('user')])}catch(e){}
+  if(d&&u){const me=await u.me();
+    if(me&&me.id){db=d;U=u;ME=me;const cw=await u.can('data.write');CANWRITE=cw!==false;subscribe();return}}
+  startLocal();
+})();
+</script>
+<script>
+if('serviceWorker' in navigator && !window.Capacitor){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+</script>
+</body>
+</html>
