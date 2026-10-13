@@ -1,5 +1,5 @@
 // Offline support: keeps the app working without a connection.
-const CACHE = 'lantern-ledger-v3';
+const CACHE = 'storyverse-v4';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'firebase-config.js', 'app-firebase.js', 'vendor/jszip.min.js', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {

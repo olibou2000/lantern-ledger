@@ -1,10 +1,10 @@
-# Lantern Ledger
+# Storyverse Tracker
 
 Keep track of roleplay story universes: characters, scene prompts and world notes, organized by story.
 
 ## Get the app
 
-**Android app (APK):** open the [Releases page](../../releases/latest) on your phone, download `lantern-ledger.apk`, and open it. Android will ask you to allow installs from your browser the first time.
+**Android app (APK):** open the [Releases page](../../releases/latest) on your phone, download `storyverse-tracker.apk`, and open it. Android will ask you to allow installs from your browser the first time.
 
 **Web app:** open the GitHub Pages link for this repo in Chrome, then tap ⋮ → **Install app** (or **Add to Home screen**). It works offline.
 
@@ -37,3 +37,7 @@ How sharing works: everyone picks a username. Friends send requests by username;
 ## Your data
 
 Without an account, stories are saved on the device you use. Use the **Backup** section to copy them out, or after signing in, to copy them into your account.
+
+## Signing
+
+`signing/debug.keystore` is the app's fixed signing key, so every build installs over the previous one as an update. It is a debug-style key (password `android`), fine for sharing the APK directly. For a Play Store release, create a private upload key instead and keep it out of the repo.

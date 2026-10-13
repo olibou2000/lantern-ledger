@@ -1,4 +1,4 @@
-// Lantern Ledger: accounts, friends and shared story universes through Firebase.
+// Storyverse Tracker: accounts, friends and shared story universes through Firebase.
 // Runs only when firebase-config.js holds a config; otherwise the app stays on-device.
 if (window.FIREBASE_CONFIG) (function () {
   let AUTH = null, FS = null, FRIENDS = [], UNSUBS = [], KNOWN = new Set(), AUTHMODE = 'in';
@@ -239,7 +239,7 @@ if (window.FIREBASE_CONFIG) (function () {
     el.hidden = false;
     const up = mode === 'up', prof = mode === 'profile';
     el.innerHTML = `<div class="auth-card">
-      <div class="auth-brand"><img src="icons/icon-192.png" alt=""><span class="brand">Lantern <span>Ledger</span></span></div>
+      <div class="auth-brand"><img src="icons/icon-192.png" alt=""><span class="brand">Storyverse <span>Tracker</span></span></div>
       <p class="note">${prof ? 'One last step: pick the name and username your friends will see.' : 'Sign in to share story universes with your friends.'}</p>
       ${prof ? '' : `<div class="seg"><button type="button" data-m="in" aria-pressed="${!up}">Sign in</button><button type="button" data-m="up" aria-pressed="${up}">Create account</button></div>`}
       <form id="auth-form" novalidate>

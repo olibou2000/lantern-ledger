@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Lantern Ledger security rules.
+// Storyverse Tracker security rules.
 // Paste this whole file into Firebase console → Firestore Database → Rules, then tap Publish.
 service cloud.firestore {
   match /databases/{database}/documents {

@@ -13,7 +13,7 @@
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}
 </style>
-<title>Lantern Ledger</title>
+<title>Storyverse Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Literata:opsz,wght@7..72,400;7..72,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -137,7 +137,7 @@ input.title:hover{border-bottom-color:var(--line)}
     <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
   </button>
   <div class="appbar-title">
-    <span class="brand">Lantern <span>Ledger</span></span>
+    <span class="brand">Storyverse <span>Tracker</span></span>
     <span class="appbar-story" id="barStory">Loading…</span>
   </div>
   <span class="label" id="status">Connecting…</span>
@@ -623,7 +623,7 @@ function renderBackup(){
   $('#bk').value=JSON.stringify(bundle());
   $('#bkCopy').onclick=()=>{$('#bk').value=JSON.stringify(bundle());copy($('#bk').value);$('#bk').select()};
   const ld=$('#bkLoad');if(ld)ld.onclick=async()=>{let d;try{d=normalize(JSON.parse($('#bk').value))}catch(e){}
-    if(!d||!d.stories.length){toast('That text is not a Lantern Ledger backup');return}
+    if(!d||!d.stories.length){toast('That text is not a Storyverse Tracker backup');return}
     if(!shared()){STORIES=d.stories;CHARS=d.chars;BIBLE=d.bible;saveLocal();setActive(STORIES[0].id);toast('Restored');return}
     try{const n=await addBundle(d);renderAll();toast(`Restored ${n} stor${n>1?'ies':'y'}`)}catch(e){writeErr(e)}};
   const rs=$('#bkReset');if(rs)arm(rs,'Tap again to erase your work',()=>{const d=fromWorlds(seedWorlds());STORIES=d.stories;CHARS=d.chars;BIBLE=d.bible;saveLocal();setActive('w1');toast('Reset')});

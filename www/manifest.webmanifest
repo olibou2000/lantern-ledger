@@ -1,6 +1,6 @@
 {
-  "name": "Lantern Ledger",
-  "short_name": "Lantern Ledger",
+  "name": "Storyverse Tracker",
+  "short_name": "Storyverse",
   "description": "Keep track of roleplay story universes, characters, scene prompts and world notes.",
   "start_url": "./",
   "scope": "./",
