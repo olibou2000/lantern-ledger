@@ -4,12 +4,13 @@
   "private": true,
   "description": "Roleplay story universes, characters, scene prompts and world notes.",
   "scripts": {
-    "vendor": "mkdir -p www/vendor && cp node_modules/jszip/dist/jszip.min.js www/vendor/"
+    "vendor": "mkdir -p www/vendor && cp node_modules/jszip/dist/jszip.min.js node_modules/firebase/firebase-app-compat.js node_modules/firebase/firebase-auth-compat.js node_modules/firebase/firebase-firestore-compat.js www/vendor/"
   },
   "dependencies": {
     "@capacitor/android": "^7.0.0",
     "@capacitor/core": "^7.0.0",
-    "jszip": "3.10.1"
+    "jszip": "3.10.1",
+    "firebase": "^11.0.0"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",

@@ -1,0 +1,75 @@
+rules_version = '2';
+
+// Lantern Ledger security rules.
+// Paste this whole file into Firebase console → Firestore Database → Rules, then tap Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+
+    // Public profile: display name and username.
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && me() == uid;
+    }
+
+    // Username → account lookup. A username can be claimed once and never changed by anyone else.
+    match /handles/{handle} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.uid == me()
+        && handle.matches('^[a-z0-9_]{3,20}$');
+    }
+
+    // Friend requests and friendships between two people.
+    match /friendships/{fid} {
+      allow read: if signedIn() && me() in resource.data.members;
+      allow create: if signedIn()
+        && request.resource.data.requestedBy == me()
+        && me() in request.resource.data.members
+        && request.resource.data.members.size() == 2
+        && request.resource.data.status == 'pending';
+      allow update: if signedIn()
+        && me() in resource.data.members
+        && me() != resource.data.requestedBy
+        && request.resource.data.status == 'accepted'
+        && request.resource.data.members == resource.data.members
+        && request.resource.data.requestedBy == resource.data.requestedBy;
+      allow delete: if signedIn() && me() in resource.data.members;
+    }
+
+    // Story universes. Only members can see a story and what is inside it.
+    match /stories/{sid} {
+      function story() { return get(/databases/$(database)/documents/stories/$(sid)).data; }
+      function isMember() { return signedIn() && me() in story().members; }
+
+      allow read: if signedIn() && me() in resource.data.members;
+      allow create: if signedIn()
+        && request.resource.data.createdBy == me()
+        && request.resource.data.members == [me()];
+      allow update: if signedIn() && (
+        // The creator can change anything except who created it.
+        (resource.data.createdBy == me() && request.resource.data.createdBy == me())
+        // Other members can only add people, or remove themselves.
+        || (me() in resource.data.members
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+            && (request.resource.data.members.hasAll(resource.data.members)
+                || resource.data.members.removeAll([me()]) == request.resource.data.members))
+      );
+      allow delete: if signedIn() && resource.data.createdBy == me();
+
+      // Characters: everyone in the story can read them, only the player edits their own.
+      match /chars/{cid} {
+        allow read: if isMember();
+        allow create: if isMember() && request.resource.data.ownerId == me();
+        allow update: if isMember() && resource.data.ownerId == me() && request.resource.data.ownerId == me();
+        allow delete: if signedIn() && (resource.data.ownerId == me() || story().createdBy == me());
+      }
+
+      // Story bible: shared by everyone in the story.
+      match /bible/{bid} {
+        allow read, write: if isMember();
+      }
+    }
+  }
+}

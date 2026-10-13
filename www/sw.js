@@ -1,6 +1,6 @@
 // Offline support: keeps the app working without a connection.
-const CACHE = 'lantern-ledger-v1';
-const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'vendor/jszip.min.js', 'icons/icon-192.png', 'icons/icon-512.png'];
+const CACHE = 'lantern-ledger-v2';
+const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'firebase-config.js', 'app-firebase.js', 'vendor/jszip.min.js', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

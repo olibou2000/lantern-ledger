@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#2f5a3a">
 <meta name="description" content="Keep track of roleplay story universes, characters, scene prompts and world notes.">
 <link rel="manifest" href="manifest.webmanifest">
+<script src="firebase-config.js"></script>
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
@@ -659,6 +660,7 @@ function subscribe(){
 renderAll();
 {const t=lsGet('ll-tab');if(t&&TABS.includes(t))showTab(t)}
 (async()=>{
+  if(window.FIREBASE_CONFIG)return; // accounts are handled by app-firebase.js
   let d=null,u=null;
   try{if(window.claude&&window.claude.use)[d,u]=await Promise.all([window.claude.use('db'),window.claude.use('user')])}catch(e){}
   if(d&&u){const me=await u.me();
@@ -666,6 +668,7 @@ renderAll();
   startLocal();
 })();
 </script>
+<script src="app-firebase.js"></script>
 <script>
 if('serviceWorker' in navigator && !window.Capacitor){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
 </script>
